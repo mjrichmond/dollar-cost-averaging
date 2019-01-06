@@ -84,7 +84,7 @@ for day in range(1, 29):
 	result = calculate_for_day_of_month(day, investAmount, brokerFee)
 	print_result("Day " + str(day), result)
 
-print("Bi-monthly results")
+print("2 times per month results")
 for day in range(1, 15):
 	firstHalf = calculate_for_day_of_month(day, investAmount / 2, brokerFee)
 	secondHalf = calculate_for_day_of_month(day + 14, investAmount / 2, brokerFee)
