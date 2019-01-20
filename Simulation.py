@@ -25,11 +25,11 @@ def add_months(sourceDate, months):
 	return datetime.datetime(year, month, day)
 
 # Calculates the ending value if you were to buy on the same day of each month.
-def calculate_for_day_of_month(day, investAmount, brokerFee):
+def calculate_for_day_of_month(csvName, day, investAmount, brokerFee):
 	nextInvestDate = datetime.datetime(2009, 1, day)
 	stock = Stock()
 	finalPrice = 0
-	with open('VTI.csv', 'rb') as csvfile:
+	with open(csvName, 'rb') as csvfile:
 		reader = csv.DictReader(csvfile)
 		for row in reader:
 			parsedDate = datetime.datetime.strptime(row['Date'], "%Y-%m-%d")
@@ -45,13 +45,13 @@ def calculate_for_day_of_month(day, investAmount, brokerFee):
 # than price on first day of the month) or on the first of the month if there are no drops. You can only buy
 # on one drop per month (the first one) and if you buy on a drop, you will skip the regular investment 
 # on the next month.
-def buy_on_drops(drop_percentance, investAmount, brokerFee):
+def buy_on_drops(csvName, dropPercentage, investAmount, brokerFee):
 	nextInvestDate = datetime.datetime(2009, 1, day)
 	nextPriceUpdate = datetime.datetime(2009, 1, day)
 	priceAtStartOfMonth = 0
 	stock = Stock()
 	finalPrice = 0
-	with open('VTI.csv', 'rb') as csvfile:
+	with open(csvName, 'rb') as csvfile:
 		reader = csv.DictReader(csvfile)
 		for row in reader:
 			parsedDate = datetime.datetime.strptime(row['Date'], "%Y-%m-%d")
@@ -66,7 +66,7 @@ def buy_on_drops(drop_percentance, investAmount, brokerFee):
 				stock.buy(investAmount, openPrice, brokerFee)
 				nextInvestDate = add_months(nextInvestDate, 1)
 			# If the price has dropped enough and we can invest, then do it
-			elif openPrice <= (priceAtStartOfMonth * (1 - drop_percentance)) and add_months(parsedDate, 1) >= nextInvestDate:
+			elif openPrice <= (priceAtStartOfMonth * (1 - dropPercentage)) and add_months(parsedDate, 1) >= nextInvestDate:
 				stock.buy(investAmount, openPrice, brokerFee)
 				nextInvestDate = add_months(nextInvestDate, 1)
 	totalValue = stock.shares * finalPrice
@@ -76,22 +76,23 @@ def print_result(prefix, result):
 	message = "{0}: Amount invested {1}, Ending value {2}".format(prefix, result.invested, result.endingValue)
 	print(message)
 
+csvName = 'SPY.csv'
 investAmount = 5000
 brokerFee = 6
 
 print("Monthly results")
 for day in range(1, 29):
-	result = calculate_for_day_of_month(day, investAmount, brokerFee)
+	result = calculate_for_day_of_month(csvName, day, investAmount, brokerFee)
 	print_result("Day " + str(day), result)
 
 print("2 times per month results")
 for day in range(1, 15):
-	firstHalf = calculate_for_day_of_month(day, investAmount / 2, brokerFee)
-	secondHalf = calculate_for_day_of_month(day + 14, investAmount / 2, brokerFee)
+	firstHalf = calculate_for_day_of_month(csvName, day, investAmount / 2, brokerFee)
+	secondHalf = calculate_for_day_of_month(csvName, day + 14, investAmount / 2, brokerFee)
 	result = SimulationResult(firstHalf.invested + secondHalf.invested, firstHalf.endingValue + secondHalf.endingValue)
 	print_result("Day " + str(day) + " & " + str(day + 14), result)
 
 print("Buy on drops")
-for drop_amount in [0.01, 0.05, 0.10, 0.15, 0.20]:
-	result = buy_on_drops(drop_amount, investAmount, brokerFee)
-	print_result(str(drop_amount) + " drop", result)
+for dropPercentage in [0.01, 0.05, 0.10, 0.15, 0.20]:
+	result = buy_on_drops(csvName, dropPercentage, investAmount, brokerFee)
+	print_result(str(dropPercentage) + " drop", result)
