@@ -1,6 +1,7 @@
 import calendar
 import csv
 import datetime
+import os
 
 class Stock:
 	def __init__(self):
@@ -77,22 +78,35 @@ def print_result(prefix, result):
 	print(message)
 
 csvName = 'SPY.csv'
+results_path = 'results/'
 investAmount = 5000
 brokerFee = 6
 
-print("Monthly results")
-for day in range(1, 29):
-	result = calculate_for_day_of_month(csvName, day, investAmount, brokerFee)
-	print_result("Day " + str(day), result)
+os.mkdir(results_path)
 
-print("2 times per month results")
-for day in range(1, 15):
-	firstHalf = calculate_for_day_of_month(csvName, day, investAmount / 2, brokerFee)
-	secondHalf = calculate_for_day_of_month(csvName, day + 14, investAmount / 2, brokerFee)
-	result = SimulationResult(firstHalf.invested + secondHalf.invested, firstHalf.endingValue + secondHalf.endingValue)
-	print_result("Day " + str(day) + " & " + str(day + 14), result)
+print("Monthly results")
+with open(results_path + 'monthly.csv', mode='w+') as monthly_file:
+	monthly_writer = csv.writer(monthly_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+	for day in range(1, 29):
+		result = calculate_for_day_of_month(csvName, day, investAmount, brokerFee)
+		monthly_writer.writerow([str(day), result.invested, result.endingValue])
+		print_result("Day " + str(day), result)
+
+print("Twice per month results")
+with open(results_path + 'twice-per-month.csv', mode='w+') as twice_per_month_file:
+	twice_per_month_writer = csv.writer(twice_per_month_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+	for day in range(1, 15):
+		firstHalf = calculate_for_day_of_month(csvName, day, investAmount / 2, brokerFee)
+		secondHalf = calculate_for_day_of_month(csvName, day + 14, investAmount / 2, brokerFee)
+		result = SimulationResult(firstHalf.invested + secondHalf.invested, firstHalf.endingValue + secondHalf.endingValue)
+		days = str(day) + " & " + str(day + 14)
+		twice_per_month_writer.writerow([days, result.invested, result.endingValue])
+		print_result("Day " + days, result)
 
 print("Buy on drops")
-for dropPercentage in [0.01, 0.05, 0.10, 0.15, 0.20]:
-	result = buy_on_drops(csvName, dropPercentage, investAmount, brokerFee)
-	print_result(str(dropPercentage) + " drop", result)
+with open(results_path + 'drops.csv', mode='w+') as drops_file:
+	drops_writer = csv.writer(drops_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+	for dropPercentage in [0.01, 0.05, 0.10, 0.15, 0.20]:
+		result = buy_on_drops(csvName, dropPercentage, investAmount, brokerFee)
+		drops_writer.writerow([str(dropPercentage), result.invested, result.endingValue])
+		print_result(str(dropPercentage) + " drop", result)
