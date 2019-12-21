@@ -2,13 +2,14 @@ import calendar
 import csv
 import datetime
 import os
+import shutil
 
 class Stock:
 	def __init__(self):
 		self.invested = 0
 		self.shares = 0
 	def buy(self, investAmount, currentPrice, brokerFee):
-		sharesToBuy = int((investAmount - brokerFee) / currentPrice)
+		sharesToBuy = (investAmount - brokerFee) / currentPrice
 		cost = (sharesToBuy * currentPrice) + brokerFee
 		self.invested = self.invested + cost
 		self.shares = self.shares + sharesToBuy
@@ -42,14 +43,14 @@ def calculate_for_day_of_month(csvName, day, investAmount, brokerFee):
 	totalValue = stock.shares * finalPrice
 	return SimulationResult(stock.invested, totalValue)
 
-# Calculates the ending value if you were to buy on drops (defined as open is drop_percentage less
-# than price on first day of the month) or on the first of the month if there are no drops. You can only buy
-# on one drop per month (the first one) and if you buy on a drop, you will skip the regular investment 
-# on the next month.
+# Calculates the ending value if you were to buy on on the first drop of the month (defined as open
+# is drop_percentage less than price on first day of the month) or on the first day of the next month
+# if there isn't a drop.
 def buy_on_drops(csvName, dropPercentage, investAmount, brokerFee):
-	nextInvestDate = datetime.datetime(2009, 1, day)
-	nextPriceUpdate = datetime.datetime(2009, 1, day)
+	nextInvestDate = datetime.datetime(2009, 1, 1)
+	nextPriceUpdate = datetime.datetime(2009, 1, 1)
 	priceAtStartOfMonth = 0
+	endedOnStandard = False
 	stock = Stock()
 	finalPrice = 0
 	with open(csvName, 'rb') as csvfile:
@@ -62,14 +63,20 @@ def buy_on_drops(csvName, dropPercentage, investAmount, brokerFee):
 			if parsedDate >= nextPriceUpdate:
 				priceAtStartOfMonth = openPrice
 				nextPriceUpdate = add_months(nextPriceUpdate, 1)
-			# Do regular investment if it is time
-			if parsedDate >= nextInvestDate:
+			# If it's the first day of the next month and we didn't invest in the previous month (no drops),
+			# invest now.
+			if parsedDate >= add_months(nextInvestDate, 1):
 				stock.buy(investAmount, openPrice, brokerFee)
 				nextInvestDate = add_months(nextInvestDate, 1)
+				endedOnStandard = True
 			# If the price has dropped enough and we can invest, then do it
-			elif openPrice <= (priceAtStartOfMonth * (1 - dropPercentage)) and add_months(parsedDate, 1) >= nextInvestDate:
+			elif openPrice <= (priceAtStartOfMonth * (1 - dropPercentage)) and parsedDate >= nextInvestDate:
 				stock.buy(investAmount, openPrice, brokerFee)
-				nextInvestDate = add_months(nextInvestDate, 1)
+				nextInvestDate = add_months(datetime.datetime(parsedDate.year, parsedDate.month, 1), 1)
+				endedOnStandard = False
+	if endedOnStandard:
+		# If we ended on a standard investment, it means that we didn't buy for the last month.
+		stock.buy(investAmount, finalPrice, brokerFee)
 	totalValue = stock.shares * finalPrice
 	return SimulationResult(stock.invested, totalValue)
 
@@ -79,9 +86,11 @@ def print_result(prefix, result):
 
 csvName = 'SPY.csv'
 results_path = 'results/'
-investAmount = 5000
-brokerFee = 6
+investAmount = 1000
+brokerFee = 0
 
+if os.path.isdir(results_path):
+	shutil.rmtree(results_path)
 os.mkdir(results_path)
 
 print("Monthly results")
